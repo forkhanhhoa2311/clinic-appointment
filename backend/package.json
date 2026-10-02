@@ -1,0 +1,13 @@
+{
+  "name": "clinic-appointment-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Clinic Appointment System",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  }
+}

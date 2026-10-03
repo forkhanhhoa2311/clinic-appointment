@@ -80,9 +80,81 @@ services:
     networks:
       - clinic_network
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: clinic_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "192.168.244.130:9091:9090"
+    networks:
+      - clinic_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: clinic_grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "192.168.244.130:3001:3000"
+    networks:
+      - clinic_network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: clinic_node_exporter
+    restart: unless-stopped
+    ports:
+      - "192.168.244.130:9101:9100"
+    networks:
+      - clinic_network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: clinic_cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "192.168.244.130:8083:8080"
+    networks:
+      - clinic_network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: clinic_postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "192.168.244.130:9187:9187"
+    networks:
+      - clinic_network
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: clinic_blackbox_exporter
+    restart: unless-stopped
+    networks:
+      - clinic_network
+
 volumes:
   postgres_data:
   pgadmin_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   clinic_network:

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Appointment</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <h1>🏥 Clinic Appointment</h1>
+        <p>Đặt lịch khám trực tuyến</p>
+    </div>
+</header>
+
+<main class="container">
+
+    <section class="hero">
+        <h2>Đặt lịch khám</h2>
+        <p>Chọn dịch vụ, bác sĩ và thời gian phù hợp với bạn.</p>
+    </section>
+
+    <section class="card">
+
+        <h3>1. Chọn dịch vụ</h3>
+
+        <div class="form-group">
+            <label for="service">Dịch vụ khám</label>
+            <select id="service">
+                <option value="">-- Đang tải dịch vụ --</option>
+            </select>
+        </div>
+
+        <h3>2. Chọn bác sĩ</h3>
+
+        <div class="form-group">
+            <label for="doctor">Bác sĩ</label>
+            <select id="doctor">
+                <option value="">-- Đang tải bác sĩ --</option>
+            </select>
+        </div>
+
+        <h3>3. Chọn ngày</h3>
+
+        <div class="form-group">
+            <label for="appointment-date">Ngày khám</label>
+            <input type="date" id="appointment-date">
+        </div>
+
+        <h3>4. Chọn khung giờ</h3>
+
+        <div id="slots" class="slots">
+            <p class="muted">Vui lòng chọn bác sĩ và ngày khám.</p>
+        </div>
+
+        <h3>5. Thông tin khách hàng</h3>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="patient-name">Họ và tên</label>
+                <input type="text" id="patient-name"
+                       placeholder="Nguyễn Văn A">
+            </div>
+
+            <div class="form-group">
+                <label for="patient-phone">Số điện thoại</label>
+                <input type="tel" id="patient-phone"
+                       placeholder="0901234567">
+            </div>
+
+            <div class="form-group full">
+                <label for="patient-email">Email</label>
+                <input type="email" id="patient-email"
+                       placeholder="email@example.com">
+            </div>
+
+            <div class="form-group full">
+                <label for="reason">Lý do khám</label>
+                <textarea id="reason"
+                          placeholder="Nhập lý do khám..."></textarea>
+            </div>
+        </div>
+
+        <button id="booking-btn" class="btn">
+            Xác nhận đặt lịch
+        </button>
+
+        <div id="message" class="message"></div>
+
+    </section>
+
+    <section id="confirmation" class="card confirmation hidden">
+        <h2>✅ Đặt lịch thành công</h2>
+        <div id="confirmation-content"></div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Clinic Appointment System</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
+

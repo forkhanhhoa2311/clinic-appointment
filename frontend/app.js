@@ -10,9 +10,29 @@ const confirmation = document.getElementById("confirmation");
 const confirmationContent = document.getElementById("confirmation-content");
 
 let selectedSlot = null;
+dateInput.min = getTodayVietnam();
 let services = [];
 let doctors = [];
+// Ngày hiện tại theo giờ Việt Nam.
+function getTodayVietnam() {
+    return new Date(Date.now() + 7 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+}
 
+// Khung giờ chỉ hợp lệ khi chưa bắt đầu.
+function isFutureSlot(date, time) {
+    if (!date || !time) return false;
+
+    const start = new Date(
+        `${date}T${time.slice(0, 8)}+07:00`
+    );
+
+    return start.getTime() > Date.now();
+}
+
+// Không cho chọn ngày trước hôm nay.
+dateInput.min = getTodayVietnam();
 // =========================
 // Load services
 // =========================
@@ -132,6 +152,11 @@ async function loadSlots() {
             '<p class="muted">Vui lòng chọn bác sĩ và ngày khám.</p>';
         return;
     }
+    if (date < dateInput.min) {
+        slotsContainer.innerHTML =
+            '<p class="muted">Ngày khám đã qua. Vui lòng chọn hôm nay hoặc một ngày tiếp theo.</p>';
+        return;
+    }
 
     slotsContainer.innerHTML =
         '<p class="muted">Đang tải khung giờ...</p>';
@@ -145,7 +170,12 @@ async function loadSlots() {
             throw new Error("Không thể tải khung giờ");
         }
 
-        const slots = await response.json();
+        const allSlots = await response.json();
+
+// Ẩn cả các giờ đã qua trong ngày hôm nay.
+	const slots = allSlots.filter(
+            slot => isFutureSlot(date, slot.start_time)
+        );
 
         if (slots.length === 0) {
             slotsContainer.innerHTML =
@@ -165,6 +195,15 @@ async function loadSlots() {
                 `${slot.start_time.slice(0, 5)} - ${slot.end_time.slice(0, 5)}`;
 
             button.addEventListener("click", () => {
+	         if (!isFutureSlot(date, slot.start_time)) {
+    showMessage(
+        "Khung giờ đã qua. Vui lòng chọn giờ khác.",
+        "error"
+    );
+
+    void loadSlots();
+    return;
+}
                 document
                     .querySelectorAll(".slot")
                     .forEach(item => item.classList.remove("selected"));
@@ -219,28 +258,49 @@ async function createAppointment() {
     bookingButton.textContent = "Đang xử lý...";
 
     try {
-        /*
-         * Hiện tại backend đang sử dụng patient_id = 1
-         * cho patient mẫu trong database.
-         *
-         * Bước tiếp theo sẽ bổ sung API tạo patient để
-         * frontend có thể lưu đúng thông tin khách hàng.
-         */
-        const response = await fetch(`${API_BASE}/appointments`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                patient_id: 1,
-                doctor_id: Number(doctorId),
-                service_id: Number(serviceId),
-                slot_id: Number(selectedSlot.id),
-                reason: reason || "Đặt lịch khám"
-            })
-        });
+    // Bước 1: tìm hoặc tạo bệnh nhân
+    const patientResponse = await fetch(`${API_BASE}/patients`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            full_name: patientName,
+            email: patientEmail,
+            phone: patientPhone
+        })
+    });
 
-        const data = await response.json();
+    const patientData = await patientResponse.json();
+
+    if (!patientResponse.ok) {
+        throw new Error(
+            patientData.error || "Không thể tạo thông tin bệnh nhân"
+        );
+    }
+
+    const patientId = Number(patientData.patient_id);
+
+    if (!patientId) {
+        throw new Error("Không lấy được patient_id");
+    }
+
+    // Bước 2: tạo lịch hẹn với đúng patient_id
+    const response = await fetch(`${API_BASE}/appointments`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            patient_id: patientId,
+            doctor_id: Number(doctorId),
+            service_id: Number(serviceId),
+            slot_id: Number(selectedSlot.id),
+            reason: reason || "Đặt lịch khám"
+        })
+    });
+
+    const data = await response.json();
 
         if (!response.ok) {
             throw new Error(data.error || data.message || "Đặt lịch thất bại");

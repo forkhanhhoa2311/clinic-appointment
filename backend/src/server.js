@@ -193,6 +193,125 @@ app.get("/api/doctors/:id/slots", async (req, res) => {
  *   "reason": "Khám tổng quát"
  * }
  */
+/*
+ * POST /api/patients
+ *
+ * Tìm bệnh nhân theo email hoặc tạo bệnh nhân mới.
+ */
+app.post("/api/patients", async (req, res) => {
+  const {
+    full_name,
+    email,
+    phone
+  } = req.body;
+
+  if (!full_name || !email || !phone) {
+    return res.status(400).json({
+      error: "Vui lòng nhập đầy đủ họ tên, email và số điện thoại"
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Kiểm tra user patient đã tồn tại theo email
+    const existingUser = await client.query(
+      `
+      SELECT
+        u.id AS user_id,
+        p.id AS patient_id
+      FROM users u
+      LEFT JOIN patients p
+        ON p.user_id = u.id
+      WHERE LOWER(u.email) = LOWER($1)
+        AND u.role = 'patient'
+      LIMIT 1
+      `,
+      [email.trim()]
+    );
+
+    if (existingUser.rows.length > 0) {
+      const patient = existingUser.rows[0];
+
+      // Cập nhật thông tin mới nhất
+      await client.query(
+        `
+        UPDATE users
+        SET
+          full_name = $1,
+          phone = $2,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        `,
+        [
+          full_name.trim(),
+          phone.trim(),
+          patient.user_id
+        ]
+      );
+
+      await client.query("COMMIT");
+
+      return res.json({
+        patient_id: patient.patient_id,
+        existing: true
+      });
+    }
+
+    // Tạo user mới
+    const userResult = await client.query(
+      `
+      INSERT INTO users (
+        full_name,
+        email,
+        password_hash,
+        phone,
+        role
+      )
+      VALUES ($1, $2, $3, $4, 'patient')
+      RETURNING id
+      `,
+      [
+        full_name.trim(),
+        email.trim(),
+        "DEMO_HASH_DO_NOT_USE_IN_PRODUCTION",
+        phone.trim()
+      ]
+    );
+
+    const userId = userResult.rows[0].id;
+
+    // Tạo hồ sơ patient tương ứng
+    const patientResult = await client.query(
+      `
+      INSERT INTO patients (user_id)
+      VALUES ($1)
+      RETURNING id
+      `,
+      [userId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.status(201).json({
+      patient_id: patientResult.rows[0].id,
+      existing: false
+    });
+
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("Create/find patient failed:", error);
+
+    return res.status(500).json({
+      error: "Không thể tạo hoặc tìm bệnh nhân"
+    });
+  } finally {
+    client.release();
+  }
+});
 app.post("/api/appointments", async (req, res) => {
   const {
     patient_id,
